@@ -1,6 +1,21 @@
 <?php
-// UI-only template; backend password resets are implemented elsewhere.
-?><!DOCTYPE html>
+require_once __DIR__ . '/auth.php';
+
+ensure_session();
+
+$message = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $email = trim((string) ($_POST['email'] ?? ''));
+
+  if ($email === '') {
+    $message = 'Please provide the email tied to your account.';
+  } else {
+    $message = 'If the account exists, a reset link will be sent.';
+  }
+}
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -110,6 +125,20 @@
       font-size: 0.95rem;
       font-weight: 600;
       color: var(--ink);
+    }
+
+    .notice {
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+      background: #e7f6ec;
+      color: #246b3a;
+      border: 1px solid #bfe3c8;
+    }
+
+    .is-hidden {
+      display: none;
     }
 
     .field {
@@ -252,10 +281,13 @@
       <h2>Reset Password</h2>
       <h3>Recover access</h3>
       <h4>Send reset link</h4>
-      <form action="#" method="post">
+      <form action="forgot-password.php" method="post">
+        <div class="notice<?php echo $message === '' ? ' is-hidden' : ''; ?>" role="status">
+          <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
+        </div>
         <div class="field">
           <label for="email">Email address</label>
-          <input id="email" name="email" type="email" placeholder="name@example.com" autocomplete="email" />
+          <input id="email" name="email" type="email" placeholder="name@example.com" autocomplete="email" required />
         </div>
         <div class="field">
           <label for="username">Username (optional)</label>

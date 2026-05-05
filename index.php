@@ -1,6 +1,41 @@
 <?php
-// UI-only template; backend authentication is implemented elsewhere.
-?><!DOCTYPE html>
+require_once __DIR__ . '/auth.php';
+
+ensure_session();
+
+if (!empty($_SESSION['user'])) {
+  header('Location: dashboard.php');
+  exit;
+}
+
+$error = '';
+$username_value = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $username_value = trim((string) ($_POST['username'] ?? ''));
+  $password = (string) ($_POST['password'] ?? '');
+
+  if ($username_value === '' || $password === '') {
+    $error = 'Please enter your username and password.';
+  } else {
+    $auth_error = '';
+    $user = authenticate_user($username_value, $password, $auth_error);
+    if ($user) {
+      $_SESSION['user'] = [
+        'username' => $user['username'],
+        'full_name' => $user['full_name'] ?? $user['username'],
+        'email' => $user['email'] ?? ''
+      ];
+
+      header('Location: dashboard.php');
+      exit;
+    }
+
+    $error = $auth_error !== '' ? $auth_error : 'Invalid username or password.';
+  }
+}
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -294,11 +329,13 @@
       <h2>Hello!</h2>
       <h3>Good Morning</h3>
       <h4>Login your account</h4>
-      <form action="dashboard.php" method="post">
-        <div class="notice notice--error is-hidden" role="alert">Invalid username or password.</div>
+      <form action="index.php" method="post">
+        <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
+          <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+        </div>
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" required />
+          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" required value="<?php echo htmlspecialchars($username_value, ENT_QUOTES, 'UTF-8'); ?>" />
           <span class="field-hint">Username is required.</span>
         </div>
         <div class="field">

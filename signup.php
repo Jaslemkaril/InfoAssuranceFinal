@@ -1,6 +1,53 @@
 <?php
-// UI-only template; backend registration is implemented elsewhere.
-?><!DOCTYPE html>
+require_once __DIR__ . '/auth.php';
+
+ensure_session();
+
+$error = '';
+$success = '';
+$values = [
+  'first_name' => '',
+  'middle_initial' => '',
+  'last_name' => '',
+  'username' => '',
+  'email' => ''
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $values['first_name'] = trim((string) ($_POST['first_name'] ?? ''));
+  $values['middle_initial'] = trim((string) ($_POST['middle_initial'] ?? ''));
+  $values['last_name'] = trim((string) ($_POST['last_name'] ?? ''));
+  $values['username'] = trim((string) ($_POST['username'] ?? ''));
+  $values['email'] = trim((string) ($_POST['email'] ?? ''));
+
+  if (register_user($_POST, $error)) {
+    $otp_code = (string) random_int(100000, 999999);
+    $otp_expires = date('Y-m-d H:i:s', time() + 600);
+    $token_saved = set_user_verification_token(
+      $values['username'],
+      password_hash($otp_code, PASSWORD_DEFAULT),
+      $otp_expires
+    );
+
+    if (!$token_saved) {
+      $error = 'Account created, but verification could not be prepared.';
+    } else {
+      $mail_error = '';
+      $recipient_name = trim($values['first_name'] . ' ' . $values['last_name']);
+      if ($recipient_name === '') {
+        $recipient_name = $values['username'];
+      }
+
+      if (send_verification_email($values['email'], $recipient_name, $otp_code, $mail_error)) {
+        $success = 'Account created. Check your email for the verification code.';
+      } else {
+        $error = 'Account created, but we could not send the verification email.';
+      }
+    }
+  }
+}
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -110,6 +157,29 @@
       font-size: 0.95rem;
       font-weight: 600;
       color: var(--ink);
+    }
+
+    .notice {
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .notice--error {
+      background: #fde9ef;
+      color: #a2334d;
+      border: 1px solid #f2b6c6;
+    }
+
+    .notice--success {
+      background: #e7f6ec;
+      color: #246b3a;
+      border: 1px solid #bfe3c8;
+    }
+
+    .is-hidden {
+      display: none;
     }
 
     .field {
@@ -247,31 +317,48 @@
       <h2>Create Account</h2>
       <h3>Start your journey</h3>
       <h4>Register your account</h4>
-      <form action="#" method="post">
+      <form action="signup.php" method="post">
+        <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
+          <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+        <div class="notice notice--success<?php echo $success === '' ? ' is-hidden' : ''; ?>" role="status">
+          <?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
+        </div>
         <div class="field">
-          <label for="full-name">Full name</label>
-          <input id="full-name" name="full_name" type="text" placeholder="Full name" autocomplete="name" />
+          <label for="first-name">First name</label>
+          <input id="first-name" name="first_name" type="text" placeholder="First name" autocomplete="given-name" required value="<?php echo htmlspecialchars($values['first_name'], ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+        <div class="field">
+          <label for="middle-initial">Middle initial (optional)</label>
+          <input id="middle-initial" name="middle_initial" type="text" placeholder="M" autocomplete="additional-name" maxlength="1" value="<?php echo htmlspecialchars($values['middle_initial'], ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+        <div class="field">
+          <label for="last-name">Last name</label>
+          <input id="last-name" name="last_name" type="text" placeholder="Last name" autocomplete="family-name" required value="<?php echo htmlspecialchars($values['last_name'], ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" />
+          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" required value="<?php echo htmlspecialchars($values['username'], ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
         <div class="field">
           <label for="email">Email address</label>
-          <input id="email" name="email" type="email" placeholder="Email" autocomplete="email" />
+          <input id="email" name="email" type="email" placeholder="Email" autocomplete="email" required value="<?php echo htmlspecialchars($values['email'], ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" placeholder="Password" autocomplete="new-password" />
+          <input id="password" name="password" type="password" placeholder="Password" autocomplete="new-password" required />
         </div>
         <div class="field">
           <label for="confirm-password">Confirm password</label>
-          <input id="confirm-password" name="confirm_password" type="password" placeholder="Confirm password" autocomplete="new-password" />
+          <input id="confirm-password" name="confirm_password" type="password" placeholder="Confirm password" autocomplete="new-password" required />
         </div>
         <button class="btn" type="submit">Create Account</button>
       </form>
       <div class="switch">
         Already have an account? <a href="index.php">Sign In</a>
+      </div>
+      <div class="switch">
+        Have a verification code? <a href="verify.php">Verify Email</a>
       </div>
     </section>
   </div>

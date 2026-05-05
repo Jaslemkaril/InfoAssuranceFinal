@@ -1,6 +1,12 @@
 <?php
-// UI-only template; backend session checks are implemented elsewhere.
-?><!DOCTYPE html>
+require_once __DIR__ . '/auth.php';
+
+require_login();
+
+$user = current_user();
+$display_name = $user['full_name'] ?? $user['username'] ?? 'Student';
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -117,6 +123,24 @@
       background: #efeaff;
       color: var(--accent);
       margin-bottom: 1.4rem;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .panel-header h2 {
+      margin-bottom: 0;
+    }
+
+    .panel-header .btn {
+      padding: 0.45rem 1.2rem;
+      font-size: 0.8rem;
+      box-shadow: none;
     }
 
     .card {
@@ -252,13 +276,21 @@
     </section>
 
     <section class="panel">
-      <h2>Project Overview</h2>
-      <h3>Secure login verified</h3>
+      <div class="panel-header">
+        <h2>Welcome, <?php echo htmlspecialchars($display_name, ENT_QUOTES, 'UTF-8'); ?></h2>
+        <a class="btn btn-outline" href="logout.php">Log Out</a>
+      </div>
+      <h3>Project Overview</h3>
       <div class="status">Session Active</div>
 
       <div class="card">
         <h4>Selected Lesson: SQL Injection</h4>
         <p>Practice spotting and mitigating injection flaws in authentication flows.</p>
+      </div>
+
+      <div class="card">
+        <h4>Security notes</h4>
+        <p>Passwords are hashed with bcrypt, inputs are validated server-side, and login errors stay generic to avoid leaking account data.</p>
       </div>
 
       <div class="card">
@@ -268,7 +300,7 @@
 
       <div class="actions">
         <a class="btn" href="lesson.php">Open Lesson Details</a>
-        <a class="btn btn-outline" href="index.php">Log Out</a>
+        <a class="btn btn-outline" href="logout.php">Log Out</a>
       </div>
     </section>
   </div>

@@ -1,6 +1,57 @@
 <?php
-// UI-only template; WebGoat lesson access is linked externally.
-?><!DOCTYPE html>
+require_once __DIR__ . '/auth.php';
+
+require_login();
+
+$completion_message = '';
+$completion_error = '';
+$completion_data = [];
+$completion_file = __DIR__ . '/data/lesson-completions.json';
+
+function load_completion_data(string $path): array {
+  if (!file_exists($path)) {
+    return [];
+  }
+
+  $raw = file_get_contents($path);
+  $data = json_decode($raw, true);
+
+  return is_array($data) ? $data : [];
+}
+
+function save_completion_data(string $path, array $data): void {
+  $payload = json_encode($data, JSON_PRETTY_PRINT);
+  file_put_contents($path, $payload, LOCK_EX);
+}
+
+$completion_data = load_completion_data($completion_file);
+$user = current_user();
+$username = $user['username'] ?? 'unknown';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $completed = (string) ($_POST['completed'] ?? '');
+  $evidence_note = trim((string) ($_POST['evidence_note'] ?? ''));
+
+  if ($completed !== 'yes') {
+    $completion_error = 'Please confirm the lesson is completed before submitting.';
+  } elseif ($evidence_note === '') {
+    $completion_error = 'Please add a short completion note or proof reference.';
+  } elseif (strlen($evidence_note) > 300) {
+    $completion_error = 'Completion note must be 300 characters or fewer.';
+  } else {
+    $completion_data[$username] = [
+      'lesson' => 'SQL Injection',
+      'completed_at' => date('Y-m-d H:i:s'),
+      'evidence_note' => $evidence_note
+    ];
+    save_completion_data($completion_file, $completion_data);
+    $completion_message = 'Completion saved. Keep your screenshot or proof ready for submission.';
+  }
+}
+
+$completion_record = $completion_data[$username] ?? null;
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -120,6 +171,55 @@
 
     .card p {
       margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .notice {
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .notice--error {
+      background: #fde9ef;
+      color: #a2334d;
+      border: 1px solid #f2b6c6;
+    }
+
+    .notice--success {
+      background: #e7f6ec;
+      color: #246b3a;
+      border: 1px solid #bfe3c8;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    .field textarea {
+      width: 100%;
+      border: 1px solid #e1d7f4;
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
       font-size: 0.85rem;
       color: var(--muted);
     }
@@ -265,6 +365,35 @@
       <div class="card">
         <h4>Submission note</h4>
         <p>Capture a screenshot or completion note as proof for the report.</p>
+      </div>
+
+      <div class="card">
+        <h4>Completion evidence</h4>
+        <?php if ($completion_error !== ''): ?>
+          <div class="notice notice--error" role="alert">
+            <?php echo htmlspecialchars($completion_error, ENT_QUOTES, 'UTF-8'); ?>
+          </div>
+        <?php endif; ?>
+        <?php if ($completion_message !== ''): ?>
+          <div class="notice notice--success" role="status">
+            <?php echo htmlspecialchars($completion_message, ENT_QUOTES, 'UTF-8'); ?>
+          </div>
+        <?php endif; ?>
+        <?php if ($completion_record): ?>
+          <p><strong>Status:</strong> Completed on <?php echo htmlspecialchars($completion_record['completed_at'], ENT_QUOTES, 'UTF-8'); ?></p>
+          <p><strong>Evidence:</strong> <?php echo htmlspecialchars($completion_record['evidence_note'], ENT_QUOTES, 'UTF-8'); ?></p>
+        <?php endif; ?>
+        <form method="post" action="lesson.php">
+          <div class="field checkbox">
+            <input id="completed" name="completed" type="checkbox" value="yes" <?php echo $completion_record ? 'checked' : ''; ?> />
+            <label for="completed">I completed the SQL Injection lesson in WebGoat.</label>
+          </div>
+          <div class="field">
+            <label for="evidence-note">Completion note or proof reference</label>
+            <textarea id="evidence-note" name="evidence_note" maxlength="300" placeholder="Example: Screenshot saved as webgoat-sqli.png"></textarea>
+          </div>
+          <button class="btn" type="submit">Save Completion</button>
+        </form>
       </div>
 
       <div class="actions">
