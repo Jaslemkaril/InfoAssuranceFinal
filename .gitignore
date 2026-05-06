@@ -1,4 +1,6 @@
 .env
 .env.*
 /vendor/
-/data/*.json
+/data/pending_users.json
+/data/login_attempts.json
+/data/lesson-completions.json
