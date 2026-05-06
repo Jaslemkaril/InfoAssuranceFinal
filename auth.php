@@ -505,12 +505,11 @@ function send_verification_email(string $to_email, string $to_name, string $otp,
         $mail->send();
         return true;
     } catch (Exception $exception) {
-        $error = 'Email could not be sent.';
+        $error = 'Email could not be sent: ' . $exception->getMessage();
+        error_log('[PHPMailer OTP] ' . $exception->getMessage());
         return false;
     }
-}
-
-function send_password_reset_email(string $to_email, string $to_name, string $reset_link, string &$error): bool {
+}(string $to_email, string $to_name, string $reset_link, string &$error): bool {
     $config_path = __DIR__ . '/config.php';
     if (!file_exists($config_path)) {
         $error = 'Email configuration is missing.';
@@ -567,7 +566,8 @@ function send_password_reset_email(string $to_email, string $to_name, string $re
         $mail->send();
         return true;
     } catch (Exception $exception) {
-        $error = 'Email could not be sent.';
+        $error = 'Email could not be sent: ' . $exception->getMessage();
+        error_log('[PHPMailer Reset] ' . $exception->getMessage());
         return false;
     }
 }
