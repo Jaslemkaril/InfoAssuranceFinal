@@ -1,9 +1,12 @@
 <?php
+$smtp_port = getenv('SMTP_PORT');
+$smtp_port = $smtp_port !== false && $smtp_port !== '' ? (int) $smtp_port : 587;
+
 return [
-    'smtp_host' => 'smtp.gmail.com',
-    'smtp_port' => 587,
-    'smtp_user' => 'your-email@gmail.com',
-    'smtp_pass' => 'your-app-password',
-    'smtp_from_email' => 'your-email@gmail.com',
-    'smtp_from_name' => 'Secure Login App'
+    'smtp_host' => getenv('SMTP_HOST') ?: 'smtp.gmail.com',
+    'smtp_port' => $smtp_port,
+    'smtp_user' => getenv('SMTP_USER') ?: '',
+    'smtp_pass' => getenv('SMTP_PASS') ?: '',
+    'smtp_from_email' => getenv('SMTP_FROM_EMAIL') ?: getenv('SMTP_USER') ?: '',
+    'smtp_from_name' => getenv('SMTP_FROM_NAME') ?: 'Secure Login App'
 ];

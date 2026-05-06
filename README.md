@@ -34,9 +34,31 @@
 ## Hosted Link
 - Add your hosted URL here before submission.
 
+## Railway Deployment
+
+### Quick Start
+1. Push this project to GitHub.
+2. Create a Railway project and deploy from GitHub.
+3. Set the start command:
+	- `php -S 0.0.0.0:$PORT -t .`
+4. Add environment variables (see list below).
+
+### Environment Variables
+- `SMTP_HOST` (example: `smtp.gmail.com`)
+- `SMTP_PORT` (example: `587`)
+- `SMTP_USER` (your sender email)
+- `SMTP_PASS` (your app password)
+- `SMTP_FROM_EMAIL` (optional, defaults to `SMTP_USER`)
+- `SMTP_FROM_NAME` (optional)
+- `DATA_DIR` (optional, defaults to `./data`)
+
+### Notes
+- Railway's filesystem is ephemeral. For persistence, move users to a database.
+- If you keep JSON storage, set `DATA_DIR=/tmp` in Railway for write access.
+
 ## Email Verification Setup (Gmail SMTP)
 1. Enable 2-Step Verification on the sender Gmail account.
 2. Create an App Password and copy it (Google only shows it once).
-3. Fill in config.php with the SMTP values and App Password.
+3. Set Railway environment variables (or fill in a local `.env` file).
 4. Install PHPMailer with Composer:
 	- `composer require phpmailer/phpmailer`

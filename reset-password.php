@@ -5,49 +5,38 @@ ensure_session();
 
 $error = '';
 $success = '';
-$email_value = '';
-$username_value = '';
+$token_value = trim((string) ($_GET['token'] ?? ($_POST['token'] ?? '')));
+$can_reset = $token_value !== '' && (find_user_by_reset_token($token_value) !== null);
+
+if ($token_value === '' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+  $error = 'Reset link is missing or expired.';
+} elseif (!$can_reset && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+  $error = 'Reset link is invalid or expired.';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $email_value = trim((string) ($_POST['email'] ?? ''));
-  $username_value = trim((string) ($_POST['username'] ?? ''));
+  $password = (string) ($_POST['password'] ?? '');
+  $confirm = (string) ($_POST['confirm_password'] ?? '');
 
-  if ($email_value === '') {
-    $error = 'Please provide the email tied to your account.';
-  } elseif (!filter_var($email_value, FILTER_VALIDATE_EMAIL)) {
-    $error = 'Please provide a valid email address.';
+  if ($token_value === '') {
+    $error = 'Reset link is invalid or expired.';
+  } elseif ($password === '' || $confirm === '') {
+    $error = 'Please enter your new password.';
+  } elseif (!password_is_valid($password)) {
+    $error = 'Password must be at least 8 characters.';
+  } elseif ($password !== $confirm) {
+    $error = 'Passwords do not match.';
   } else {
-    $user = find_user_by_email(load_users(), $email_value);
-
-    if ($user && $username_value !== '') {
-      if (normalize_username($user['username'] ?? '') !== normalize_username($username_value)) {
-        $user = null;
+    $user = find_user_by_reset_token($token_value);
+    if (!$user) {
+      $error = 'Reset link is invalid or expired.';
+    } else {
+      if (update_user_password($user['username'], password_hash($password, PASSWORD_DEFAULT))) {
+        $success = 'Password updated. You can now sign in.';
+        $can_reset = false;
+      } else {
+        $error = 'We could not update your password. Please try again.';
       }
-    }
-
-    if ($user) {
-      $token = bin2hex(random_bytes(32));
-      $reset_hash = password_hash($token, PASSWORD_DEFAULT);
-      $reset_expires = date('Y-m-d H:i:s', time() + 600);
-      set_password_reset_token($user['username'], $reset_hash, $reset_expires);
-
-      $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-      $base_path = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-      $reset_link = $scheme . '://' . $_SERVER['HTTP_HOST'] . $base_path . '/reset-password.php?token=' . urlencode($token);
-
-      $mail_error = '';
-      $recipient_name = $user['full_name'] ?? $user['username'] ?? '';
-      if ($recipient_name === '') {
-        $recipient_name = 'Student';
-      }
-
-      if (!send_password_reset_email($email_value, $recipient_name, $reset_link, $mail_error)) {
-        $error = $mail_error !== '' ? $mail_error : 'We could not send the reset link.';
-      }
-    }
-
-    if ($error === '') {
-      $success = 'If the account exists, a reset link will be sent.';
     }
   }
 }
@@ -155,13 +144,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 1.05rem;
       font-weight: 500;
       color: var(--muted);
-    }
-
-    .panel h4 {
-      margin: 0 0 1.6rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--ink);
     }
 
     .notice {
@@ -296,8 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="shell">
     <section class="art">
       <div>
-        <h1>Hello!</h1>
-        <p>Good Morning</p>
+        <h1>Reset</h1>
+        <p>Choose a new password for your account.</p>
       </div>
 
       <svg class="illustration" viewBox="0 0 400 260" role="img" aria-label="Night sky illustration">
@@ -318,32 +300,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </svg>
 
       <div>
-        <p>Recover your account access in minutes.</p>
-        <p>We will email you a secure reset link.</p>
+        <p>Use a strong password you have not used before.</p>
       </div>
     </section>
 
     <section class="panel">
       <h2>Reset Password</h2>
-      <h3>Recover access</h3>
-      <h4>Send reset link</h4>
-      <form action="forgot-password.php" method="post">
-        <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
-          <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
-        </div>
-        <div class="notice notice--success<?php echo $success === '' ? ' is-hidden' : ''; ?>" role="status">
-          <?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
-        </div>
-        <div class="field">
-          <label for="email">Email address</label>
-          <input id="email" name="email" type="email" placeholder="name@example.com" autocomplete="email" required value="<?php echo htmlspecialchars($email_value, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-        <div class="field">
-          <label for="username">Username (optional)</label>
-          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" value="<?php echo htmlspecialchars($username_value, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-        <button class="btn" type="submit">Send Link</button>
-      </form>
+      <h3>Set a new password</h3>
+      <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
+        <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+      </div>
+      <div class="notice notice--success<?php echo $success === '' ? ' is-hidden' : ''; ?>" role="status">
+        <?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
+      </div>
+
+      <?php if ($can_reset) { ?>
+        <form action="reset-password.php" method="post">
+          <input type="hidden" name="token" value="<?php echo htmlspecialchars($token_value, ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="field">
+            <label for="password">New password</label>
+            <input id="password" name="password" type="password" placeholder="New password" autocomplete="new-password" required />
+          </div>
+          <div class="field">
+            <label for="confirm-password">Confirm password</label>
+            <input id="confirm-password" name="confirm_password" type="password" placeholder="Confirm password" autocomplete="new-password" required />
+          </div>
+          <button class="btn" type="submit">Update Password</button>
+        </form>
+      <?php } ?>
+
       <div class="switch">
         <a href="index.php">Back to Login</a>
       </div>

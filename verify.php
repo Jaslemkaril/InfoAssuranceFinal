@@ -5,7 +5,7 @@ ensure_session();
 
 $error = '';
 $success = '';
-$username_value = '';
+$username_value = trim((string) ($_GET['username'] ?? ($_POST['username'] ?? '')));
 $code_value = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -15,22 +15,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($username_value === '' || $code_value === '') {
     $error = 'Please enter your username and verification code.';
   } else {
-    $user = find_user_by_username(load_users(), $username_value);
-    if (!$user) {
+    $pending = find_pending_user_by_username(load_pending_users(), $username_value);
+    if (!$pending) {
       $error = 'Invalid verification details.';
     } else {
-      $expires = $user['otp_expires'] ?? null;
-      $otp_hash = $user['otp_hash'] ?? '';
+      $expires = $pending['otp_expires'] ?? null;
+      $otp_hash = $pending['otp_hash'] ?? '';
 
       if (!$expires || strtotime($expires) < time()) {
         $error = 'Verification code expired. Please request a new one.';
       } elseif (!password_verify($code_value, $otp_hash)) {
         $error = 'Invalid verification details.';
       } else {
-        if (mark_user_verified($username_value)) {
-          $success = 'Email verified. You can now sign in.';
-        } else {
+        $removed = remove_pending_user_by_username($username_value);
+        if (!$removed) {
           $error = 'We could not verify your account. Please try again.';
+        } else {
+          $final_error = '';
+          if (finalize_pending_user($removed, $final_error)) {
+            $success = 'Email verified. You can now sign in.';
+          } else {
+            $error = $final_error !== '' ? $final_error : 'We could not verify your account. Please try again.';
+          }
         }
       }
     }
@@ -44,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Verify Email</title>
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap");
 
     :root {
       --bg: #7b5bd6;
@@ -63,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     body {
       margin: 0;
-      font-family: "Poppins", "Segoe UI", Tahoma, sans-serif;
+      font-family: "Source Sans 3", "Segoe UI", Tahoma, sans-serif;
       color: var(--ink);
       background: radial-gradient(circle at 15% 20%, #8f77ef 0%, var(--bg) 55%, #4c2d9e 100%);
       min-height: 100vh;
@@ -73,19 +79,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       padding: 2rem;
     }
 
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      z-index: 0;
+      opacity: 0.3;
+      animation: float 12s ease-in-out infinite;
+    }
+
+    body::before {
+      top: -120px;
+      left: -80px;
+      background: radial-gradient(circle, rgba(140, 118, 239, 0.55), transparent 65%);
+    }
+
+    body::after {
+      bottom: -140px;
+      right: -80px;
+      background: radial-gradient(circle, rgba(108, 70, 200, 0.4), transparent 65%);
+      animation-delay: 1.5s;
+    }
+
     .shell {
-      width: min(860px, 95vw);
-      min-height: 480px;
-      background: #ffffff;
-      border-radius: 18px;
+      position: relative;
+      width: min(520px, 95vw);
+      min-height: 420px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 22px;
       box-shadow: 0 30px 60px var(--shadow);
       overflow: hidden;
       display: grid;
       grid-template-columns: 1fr;
+      z-index: 1;
     }
 
     .panel {
-      padding: 3.2rem 3.2rem 2.8rem;
+      padding: 3.2rem 3rem 2.8rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -93,7 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     .panel h2 {
       margin: 0 0 0.2rem;
-      font-size: 1.6rem;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      font-size: 1.8rem;
       font-weight: 600;
     }
 
@@ -102,6 +136,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 1.05rem;
       font-weight: 500;
       color: var(--muted);
+    }
+
+    .otp-hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: -1.4rem 0 1.6rem;
     }
 
     .notice {
@@ -142,17 +182,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       width: 100%;
       border: none;
       border-bottom: 1px solid #d9d2ef;
-      padding: 0.6rem 0.2rem;
-      font-size: 0.95rem;
+      padding: 0.8rem 0.2rem;
+      font-size: 1.05rem;
       outline: none;
       font-family: inherit;
+      letter-spacing: 0.2rem;
+      text-align: center;
+    }
+
+    .field input::placeholder {
+      letter-spacing: 0.12rem;
+      text-align: center;
     }
 
     .btn {
       border: none;
       background: linear-gradient(135deg, var(--accent), var(--accent-2));
       color: #fff;
-      padding: 0.7rem 2.4rem;
+      padding: 0.8rem 2.4rem;
       border-radius: 999px;
       font-weight: 600;
       box-shadow: 0 10px 20px rgba(88, 64, 160, 0.3);
@@ -181,7 +228,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       .panel {
-        padding: 2rem 1.5rem 2.2rem;
+        padding: 2rem 1.6rem 2.2rem;
+      }
+    }
+
+    @keyframes float {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-12px);
       }
     }
   </style>
@@ -191,7 +248,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="panel">
       <h2>Verify Email</h2>
       <h3>Enter the code sent to your email</h3>
+      <p class="otp-hint">The code expires in 10 minutes.</p>
       <form action="verify.php" method="post">
+        <input type="hidden" name="username" value="<?php echo htmlspecialchars($username_value, ENT_QUOTES, 'UTF-8'); ?>" />
         <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
           <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>
@@ -199,12 +258,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <div class="field">
-          <label for="username">Username</label>
-          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" required value="<?php echo htmlspecialchars($username_value, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-        <div class="field">
           <label for="code">Verification code</label>
-          <input id="code" name="code" type="text" placeholder="6-digit code" required value="<?php echo htmlspecialchars($code_value, ENT_QUOTES, 'UTF-8'); ?>" />
+          <input id="code" name="code" type="text" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code" pattern="\d{6}" maxlength="6" required value="<?php echo htmlspecialchars($code_value, ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
         <button class="btn" type="submit">Verify</button>
       </form>

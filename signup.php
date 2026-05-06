@@ -20,17 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $values['username'] = trim((string) ($_POST['username'] ?? ''));
   $values['email'] = trim((string) ($_POST['email'] ?? ''));
 
-  if (register_user($_POST, $error)) {
+  $pending_user = build_user_record($_POST, $error);
+  if ($pending_user) {
     $otp_code = (string) random_int(100000, 999999);
     $otp_expires = date('Y-m-d H:i:s', time() + 600);
-    $token_saved = set_user_verification_token(
-      $values['username'],
-      password_hash($otp_code, PASSWORD_DEFAULT),
-      $otp_expires
-    );
+    $pending_user['otp_hash'] = password_hash($otp_code, PASSWORD_DEFAULT);
+    $pending_user['otp_expires'] = $otp_expires;
 
-    if (!$token_saved) {
-      $error = 'Account created, but verification could not be prepared.';
+    if (!add_pending_user($pending_user)) {
+      $error = 'Account could not be created. Please try again.';
     } else {
       $mail_error = '';
       $recipient_name = trim($values['first_name'] . ' ' . $values['last_name']);
@@ -39,7 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       if (send_verification_email($values['email'], $recipient_name, $otp_code, $mail_error)) {
-        $success = 'Account created. Check your email for the verification code.';
+        header('Location: verify.php?username=' . rawurlencode($values['username']));
+        exit;
       } else {
         $error = 'Account created, but we could not send the verification email.';
       }
@@ -356,9 +355,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
       <div class="switch">
         Already have an account? <a href="index.php">Sign In</a>
-      </div>
-      <div class="switch">
-        Have a verification code? <a href="verify.php">Verify Email</a>
       </div>
     </section>
   </div>
