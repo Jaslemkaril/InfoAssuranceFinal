@@ -462,11 +462,10 @@ function resend_send_email(string $to_email, string $to_name, string $subject, s
     }
 
     $from_email = $config['resend_from_email'] ?? 'onboarding@resend.dev';
-    $from_name = $config['smtp_from_name'] ?? 'Secure Login App';
 
     $payload = json_encode([
-        'from'    => "{$from_name} <{$from_email}>",
-        'to'      => ["{$to_name} <{$to_email}>"],
+        'from'    => $from_email,
+        'to'      => [$to_email],
         'subject' => $subject,
         'text'    => $text_body,
     ]);
