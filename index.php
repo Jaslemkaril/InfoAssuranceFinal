@@ -366,8 +366,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="shell">
     <section class="art">
       <div>
-        <h1>Hello!</h1>
-        <p>Good Morning</p>
+        <h1>Welcome Back!</h1>
+        <p>Sign in to continue</p>
       </div>
 
       <svg class="illustration" viewBox="0 0 400 260" role="img" aria-label="Night sky illustration">
@@ -393,8 +393,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </section>
 
     <section class="panel">
-      <h2>Hello!</h2>
-      <h3>Good Morning</h3>
+      <h2>Welcome Back!</h2>
+      <h3>Sign in to your account</h3>
       <h4>Login your account</h4>
       <form action="index.php" method="post">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>" />

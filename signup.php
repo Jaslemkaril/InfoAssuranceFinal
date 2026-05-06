@@ -355,8 +355,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="shell">
     <section class="art">
       <div>
-        <h1>Hello!</h1>
-        <p>Good Morning</p>
+        <h1>Get Started</h1>
+        <p>Create your account</p>
       </div>
 
       <svg class="illustration" viewBox="0 0 400 260" role="img" aria-label="Night sky illustration">
