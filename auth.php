@@ -509,7 +509,9 @@ function send_verification_email(string $to_email, string $to_name, string $otp,
         error_log('[PHPMailer OTP] ' . $exception->getMessage());
         return false;
     }
-}(string $to_email, string $to_name, string $reset_link, string &$error): bool {
+}
+
+function send_password_reset_email(string $to_email, string $to_name, string $reset_link, string &$error): bool {
     $config_path = __DIR__ . '/config.php';
     if (!file_exists($config_path)) {
         $error = 'Email configuration is missing.';
