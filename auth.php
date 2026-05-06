@@ -448,7 +448,7 @@ function mark_user_verified(string $username): bool {
     ]);
 }
 
-function resend_send_email(string $to_email, string $to_name, string $subject, string $text_body, string &$error): bool {
+function brevo_send_email(string $to_email, string $to_name, string $subject, string $text_body, string &$error): bool {
     $config_path = __DIR__ . '/config.php';
     if (!file_exists($config_path)) {
         $error = 'Email configuration is missing.';
@@ -456,21 +456,22 @@ function resend_send_email(string $to_email, string $to_name, string $subject, s
     }
 
     $config = require $config_path;
-    if (!is_array($config) || empty($config['resend_api_key'])) {
-        $error = 'Resend API key is not configured.';
+    if (!is_array($config) || empty($config['brevo_api_key'])) {
+        $error = 'Brevo API key is not configured.';
         return false;
     }
 
-    $from_email = $config['resend_from_email'] ?? 'onboarding@resend.dev';
+    $from_email = $config['brevo_from_email'] ?? '';
+    $from_name  = $config['smtp_from_name'] ?? 'Secure Login App';
 
     $payload = json_encode([
-        'from'    => $from_email,
-        'to'      => [$to_email],
-        'subject' => $subject,
-        'text'    => $text_body,
+        'sender'      => ['name' => $from_name, 'email' => $from_email],
+        'to'          => [['email' => $to_email, 'name' => $to_name]],
+        'subject'     => $subject,
+        'textContent' => $text_body,
     ]);
 
-    $ch = curl_init('https://api.resend.com/emails');
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $payload,
@@ -478,7 +479,7 @@ function resend_send_email(string $to_email, string $to_name, string $subject, s
         CURLOPT_TIMEOUT        => 15,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . $config['resend_api_key'],
+            'api-key: ' . $config['brevo_api_key'],
         ],
     ]);
 
@@ -489,7 +490,7 @@ function resend_send_email(string $to_email, string $to_name, string $subject, s
 
     if ($curl_error !== '') {
         $error = 'Email could not be sent: ' . $curl_error;
-        error_log('[Resend] curl error: ' . $curl_error);
+        error_log('[Brevo] curl error: ' . $curl_error);
         return false;
     }
 
@@ -497,7 +498,7 @@ function resend_send_email(string $to_email, string $to_name, string $subject, s
         $decoded = json_decode((string) $response, true);
         $msg = is_array($decoded) && isset($decoded['message']) ? $decoded['message'] : (string) $response;
         $error = 'Email could not be sent: ' . $msg;
-        error_log('[Resend] HTTP ' . $http_code . ': ' . $msg);
+        error_log('[Brevo] HTTP ' . $http_code . ': ' . $msg);
         return false;
     }
 
@@ -507,13 +508,13 @@ function resend_send_email(string $to_email, string $to_name, string $subject, s
 function send_verification_email(string $to_email, string $to_name, string $otp, string &$error): bool {
     $subject = 'Your verification code';
     $body    = "Your verification code is: {$otp}. It expires in 10 minutes.";
-    return resend_send_email($to_email, $to_name, $subject, $body, $error);
+    return brevo_send_email($to_email, $to_name, $subject, $body, $error);
 }
 
 function send_password_reset_email(string $to_email, string $to_name, string $reset_link, string &$error): bool {
     $subject = 'Reset your password';
     $body    = "Use this link to reset your password: {$reset_link}. This link expires in 10 minutes.";
-    return resend_send_email($to_email, $to_name, $subject, $body, $error);
+    return brevo_send_email($to_email, $to_name, $subject, $body, $error);
 }
 
 function require_login(): void {

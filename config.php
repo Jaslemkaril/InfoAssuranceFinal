@@ -9,6 +9,6 @@ return [
     'smtp_pass' => getenv('SMTP_PASS') ?: '',
     'smtp_from_email' => getenv('SMTP_FROM_EMAIL') ?: getenv('SMTP_USER') ?: '',
     'smtp_from_name' => getenv('SMTP_FROM_NAME') ?: 'Secure Login App',
-    'resend_api_key' => getenv('RESEND_API_KEY') ?: '',
-    'resend_from_email' => getenv('RESEND_FROM_EMAIL') ?: 'onboarding@resend.dev',
+    'brevo_api_key' => getenv('BREVO_API_KEY') ?: '',
+    'brevo_from_email' => getenv('BREVO_FROM_EMAIL') ?: '',
 ];
