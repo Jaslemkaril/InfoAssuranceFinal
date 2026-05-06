@@ -440,6 +440,7 @@ $display_name = $user['full_name'] ?? $user['username'] ?? 'Student';
 
       <div class="actions">
         <a class="btn" href="lesson.php">Open Lesson Details</a>
+        <a class="btn btn-outline" href="security.php">Security Overview</a>
       </div>
     </section>
   </div>
