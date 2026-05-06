@@ -1,12 +1,1 @@
-[
-    {
-        "username": "admin",
-        "email": "kariljaslem9@gmail.com",
-        "full_name": "Admin User",
-        "password_hash": "$2y$10$j6EdM6aS2mVhHW4zjyVqjeMtkkiUax11l6770t\/tvkuPV0Xr9zynO",
-        "verified": true,
-        "otp_hash": null,
-        "otp_expires": null,
-        "created_at": "2026-05-07 00:00:00"
-    }
-]
+[]
