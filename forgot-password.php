@@ -294,6 +294,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         padding: 0.7rem 1.6rem;
       }
     }
+
+    /* ── Loading overlay ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(44, 35, 80, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .loading-overlay.active { display: flex; }
+    .spinner {
+      width: 52px;
+      height: 52px;
+      border: 4px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    .loading-label {
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .shell { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+    .btn {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+      letter-spacing: 0.2px;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 28px rgba(88,64,160,0.38); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .notice.is-hidden { display: none !important; }
+    .field input:focus { outline: none; border-bottom-color: var(--accent); transition: border-bottom-color 0.2s; }
   </style>
 </head>
 <body>
@@ -354,5 +399,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
   </div>
+  <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <span class="loading-label">Please wait…</span>
+  </div>
+  <script>
+    (function () {
+      var overlay = document.getElementById('loadingOverlay');
+      document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          if (form.checkValidity()) {
+            overlay.classList.add('active');
+          }
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

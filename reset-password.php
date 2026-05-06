@@ -276,6 +276,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         padding: 0.7rem 1.6rem;
       }
     }
+
+    /* ── Loading overlay ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(44, 35, 80, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .loading-overlay.active { display: flex; }
+    .spinner {
+      width: 52px;
+      height: 52px;
+      border: 4px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    .loading-label {
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .shell { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+    .btn {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+      letter-spacing: 0.2px;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 28px rgba(88,64,160,0.38); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .field-wrap { position: relative; }
+    .toggle-pw {
+      position: absolute;
+      right: 0.2rem;
+      bottom: 0.55rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.2rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      line-height: 1;
+    }
+    .toggle-pw:hover { color: var(--accent); }
+    .toggle-pw svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .notice.is-hidden { display: none !important; }
+    .field input:focus { outline: none; border-bottom-color: var(--accent); transition: border-bottom-color 0.2s; }
   </style>
 </head>
 <body>
@@ -324,11 +385,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <input type="hidden" name="token" value="<?php echo htmlspecialchars($token_value, ENT_QUOTES, 'UTF-8'); ?>" />
           <div class="field">
             <label for="password">New password</label>
-            <input id="password" name="password" type="password" placeholder="New password" autocomplete="new-password" required />
+            <div class="field-wrap">
+              <input id="password" name="password" type="password" placeholder="New password" autocomplete="new-password" required />
+              <button type="button" class="toggle-pw" aria-label="Show password">
+                <svg class="eye-on" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-off" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
           </div>
           <div class="field">
             <label for="confirm-password">Confirm password</label>
-            <input id="confirm-password" name="confirm_password" type="password" placeholder="Confirm password" autocomplete="new-password" required />
+            <div class="field-wrap">
+              <input id="confirm-password" name="confirm_password" type="password" placeholder="Confirm password" autocomplete="new-password" required />
+              <button type="button" class="toggle-pw" aria-label="Show password">
+                <svg class="eye-on" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-off" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
           </div>
           <button class="btn" type="submit">Update Password</button>
         </form>
@@ -339,5 +412,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
   </div>
+  <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <span class="loading-label">Please wait…</span>
+  </div>
+  <script>
+    (function () {
+      var overlay = document.getElementById('loadingOverlay');
+      document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          if (form.checkValidity()) {
+            overlay.classList.add('active');
+          }
+        });
+      });
+      document.querySelectorAll('.toggle-pw').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var input = btn.parentElement.querySelector('input');
+          var showing = input.type === 'text';
+          input.type = showing ? 'password' : 'text';
+          btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+          btn.querySelector('.eye-on').style.display = showing ? '' : 'none';
+          btn.querySelector('.eye-off').style.display = showing ? 'none' : '';
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

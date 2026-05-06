@@ -365,6 +365,13 @@ $display_name = $user['full_name'] ?? $user['username'] ?? 'Student';
         padding: 0.7rem 1.6rem;
       }
     }
+
+    /* ── Card entrance ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .shell { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
   </style>
 </head>
 <body>
