@@ -15,27 +15,31 @@ if ($token_value === '' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $password = (string) ($_POST['password'] ?? '');
-  $confirm = (string) ($_POST['confirm_password'] ?? '');
-
-  if ($token_value === '') {
-    $error = 'Reset link is invalid or expired.';
-  } elseif ($password === '' || $confirm === '') {
-    $error = 'Please enter your new password.';
-  } elseif (!password_is_valid($password)) {
-    $error = 'Password must be at least 8 characters.';
-  } elseif ($password !== $confirm) {
-    $error = 'Passwords do not match.';
+  if (!validate_csrf_token((string) ($_POST['csrf_token'] ?? ''))) {
+    $error = 'Invalid form submission. Please try again.';
   } else {
-    $user = find_user_by_reset_token($token_value);
-    if (!$user) {
+    $password = (string) ($_POST['password'] ?? '');
+    $confirm = (string) ($_POST['confirm_password'] ?? '');
+
+    if ($token_value === '') {
       $error = 'Reset link is invalid or expired.';
+    } elseif ($password === '' || $confirm === '') {
+      $error = 'Please enter your new password.';
+    } elseif (!password_is_valid($password)) {
+      $error = 'Password must be at least 8 characters.';
+    } elseif ($password !== $confirm) {
+      $error = 'Passwords do not match.';
     } else {
-      if (update_user_password($user['username'], password_hash($password, PASSWORD_DEFAULT))) {
-        $success = 'Password updated. You can now sign in.';
-        $can_reset = false;
+      $user = find_user_by_reset_token($token_value);
+      if (!$user) {
+        $error = 'Reset link is invalid or expired.';
       } else {
-        $error = 'We could not update your password. Please try again.';
+        if (update_user_password($user['username'], password_hash($password, PASSWORD_DEFAULT))) {
+          $success = 'Password updated. You can now sign in.';
+          $can_reset = false;
+        } else {
+          $error = 'We could not update your password. Please try again.';
+        }
       }
     }
   }
@@ -316,6 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <?php if ($can_reset) { ?>
         <form action="reset-password.php" method="post">
+          <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>" />
           <input type="hidden" name="token" value="<?php echo htmlspecialchars($token_value, ENT_QUOTES, 'UTF-8'); ?>" />
           <div class="field">
             <label for="password">New password</label>

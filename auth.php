@@ -8,11 +8,33 @@ if ($data_dir === false || trim($data_dir) === '') {
 define('DATA_DIR', rtrim($data_dir, '/\\'));
 define('USERS_FILE', DATA_DIR . '/users.json');
 define('PENDING_USERS_FILE', DATA_DIR . '/pending_users.json');
+define('LOGIN_ATTEMPTS_FILE', DATA_DIR . '/login_attempts.json');
 
 function ensure_session(): void {
     if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => '/',
+            'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ]);
         session_start();
     }
+}
+
+function generate_csrf_token(): string {
+    ensure_session();
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function validate_csrf_token(string $token): bool {
+    ensure_session();
+    $stored = $_SESSION['csrf_token'] ?? '';
+    return $stored !== '' && hash_equals($stored, $token);
 }
 
 function load_users(): array {
@@ -167,12 +189,12 @@ function build_user_record(array $input, string &$error): ?array {
 
     foreach (array_merge($users, $pending_users) as $user) {
         if (normalize_username($user['username'] ?? '') === normalize_username($username)) {
-            $error = 'That username is already taken.';
+            $error = 'Username or email is already in use.';
             return null;
         }
 
         if (isset($user['email']) && strtolower($user['email']) === strtolower($email)) {
-            $error = 'That email is already registered.';
+            $error = 'Username or email is already in use.';
             return null;
         }
     }
@@ -193,6 +215,18 @@ function build_user_record(array $input, string &$error): ?array {
         'otp_expires' => null,
         'created_at' => date('Y-m-d H:i:s')
     ];
+}
+
+function purge_expired_pending_users(): void {
+    $pending = load_pending_users();
+    $cutoff = time() - 86400; // remove pending accounts older than 24 hours
+    $filtered = array_filter($pending, function (array $u) use ($cutoff): bool {
+        $created = $u['created_at'] ?? null;
+        return $created === null || strtotime($created) >= $cutoff;
+    });
+    if (count($filtered) !== count($pending)) {
+        save_pending_users(array_values($filtered));
+    }
 }
 
 function add_pending_user(array $user): bool {
@@ -319,16 +353,72 @@ function find_user_by_reset_token(string $token): ?array {
     return null;
 }
 
-function authenticate_user(string $username, string $password, string &$error): ?array {
-    $users = load_users();
-    $user = find_user_by_username($users, $username);
+function load_login_attempts(): array {
+    if (!file_exists(LOGIN_ATTEMPTS_FILE)) {
+        return [];
+    }
+    $raw = file_get_contents(LOGIN_ATTEMPTS_FILE);
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
 
-    if (!$user) {
-        $error = 'Invalid username or password.';
+function save_login_attempts(array $data): void {
+    file_put_contents(LOGIN_ATTEMPTS_FILE, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
+}
+
+function is_login_rate_limited(string $ip): bool {
+    $attempts = load_login_attempts();
+    $window = 300;
+    $max = 5;
+    $now = time();
+    $key = hash('sha256', $ip);
+    $record = $attempts[$key] ?? ['count' => 0, 'window_start' => $now];
+    if (($now - $record['window_start']) >= $window) {
+        return false;
+    }
+    return $record['count'] >= $max;
+}
+
+function record_failed_login(string $ip): void {
+    $attempts = load_login_attempts();
+    $window = 300;
+    $now = time();
+    $key = hash('sha256', $ip);
+    $record = $attempts[$key] ?? ['count' => 0, 'window_start' => $now];
+    if (($now - $record['window_start']) >= $window) {
+        $record = ['count' => 1, 'window_start' => $now];
+    } else {
+        $record['count']++;
+    }
+    $attempts[$key] = $record;
+    foreach ($attempts as $k => $r) {
+        if (($now - $r['window_start']) >= $window * 2) {
+            unset($attempts[$k]);
+        }
+    }
+    save_login_attempts($attempts);
+}
+
+function clear_failed_logins(string $ip): void {
+    $attempts = load_login_attempts();
+    $key = hash('sha256', $ip);
+    unset($attempts[$key]);
+    save_login_attempts($attempts);
+}
+
+function authenticate_user(string $username, string $password, string &$error): ?array {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+    if (is_login_rate_limited($ip)) {
+        $error = 'Too many failed login attempts. Please wait 5 minutes and try again.';
         return null;
     }
 
-    if (!password_verify($password, $user['password_hash'] ?? '')) {
+    $users = load_users();
+    $user = find_user_by_username($users, $username);
+
+    if (!$user || !password_verify($password, $user['password_hash'] ?? '')) {
+        record_failed_login($ip);
         $error = 'Invalid username or password.';
         return null;
     }
@@ -338,6 +428,7 @@ function authenticate_user(string $username, string $password, string &$error): 
         return null;
     }
 
+    clear_failed_logins($ip);
     return $user;
 }
 
@@ -488,6 +579,15 @@ function require_login(): void {
         header('Location: index.php');
         exit;
     }
+
+    $timeout = 1800; // 30-minute inactivity timeout
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {
+        session_unset();
+        session_destroy();
+        header('Location: index.php?timeout=1');
+        exit;
+    }
+    $_SESSION['last_activity'] = time();
 }
 
 function current_user(): ?array {

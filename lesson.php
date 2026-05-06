@@ -29,23 +29,27 @@ $user = current_user();
 $username = $user['username'] ?? 'unknown';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $completed = (string) ($_POST['completed'] ?? '');
-  $evidence_note = trim((string) ($_POST['evidence_note'] ?? ''));
-
-  if ($completed !== 'yes') {
-    $completion_error = 'Please confirm the lesson is completed before submitting.';
-  } elseif ($evidence_note === '') {
-    $completion_error = 'Please add a short completion note or proof reference.';
-  } elseif (strlen($evidence_note) > 300) {
-    $completion_error = 'Completion note must be 300 characters or fewer.';
+  if (!validate_csrf_token((string) ($_POST['csrf_token'] ?? ''))) {
+    $completion_error = 'Invalid form submission. Please try again.';
   } else {
-    $completion_data[$username] = [
-      'lesson' => 'SQL Injection',
-      'completed_at' => date('Y-m-d H:i:s'),
-      'evidence_note' => $evidence_note
-    ];
-    save_completion_data($completion_file, $completion_data);
-    $completion_message = 'Completion saved. Keep your screenshot or proof ready for submission.';
+    $completed = (string) ($_POST['completed'] ?? '');
+    $evidence_note = trim((string) ($_POST['evidence_note'] ?? ''));
+
+    if ($completed !== 'yes') {
+      $completion_error = 'Please confirm the lesson is completed before submitting.';
+    } elseif ($evidence_note === '') {
+      $completion_error = 'Please add a short completion note or proof reference.';
+    } elseif (strlen($evidence_note) > 300) {
+      $completion_error = 'Completion note must be 300 characters or fewer.';
+    } else {
+      $completion_data[$username] = [
+        'lesson' => 'SQL Injection',
+        'completed_at' => date('Y-m-d H:i:s'),
+        'evidence_note' => $evidence_note
+      ];
+      save_completion_data($completion_file, $completion_data);
+      $completion_message = 'Completion saved. Keep your screenshot or proof ready for submission.';
+    }
   }
 }
 
@@ -384,6 +388,7 @@ $completion_record = $completion_data[$username] ?? null;
           <p><strong>Evidence:</strong> <?php echo htmlspecialchars($completion_record['evidence_note'], ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
         <form method="post" action="lesson.php">
+          <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>" />
           <div class="field checkbox">
             <input id="completed" name="completed" type="checkbox" value="yes" <?php echo $completion_record ? 'checked' : ''; ?> />
             <label for="completed">I completed the SQL Injection lesson in WebGoat.</label>

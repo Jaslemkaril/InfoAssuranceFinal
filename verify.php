@@ -9,33 +9,37 @@ $username_value = trim((string) ($_GET['username'] ?? ($_POST['username'] ?? '')
 $code_value = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $username_value = trim((string) ($_POST['username'] ?? ''));
-  $code_value = trim((string) ($_POST['code'] ?? ''));
-
-  if ($username_value === '' || $code_value === '') {
-    $error = 'Please enter your username and verification code.';
+  if (!validate_csrf_token((string) ($_POST['csrf_token'] ?? ''))) {
+    $error = 'Invalid form submission. Please try again.';
   } else {
-    $pending = find_pending_user_by_username(load_pending_users(), $username_value);
-    if (!$pending) {
-      $error = 'Invalid verification details.';
-    } else {
-      $expires = $pending['otp_expires'] ?? null;
-      $otp_hash = $pending['otp_hash'] ?? '';
+    $username_value = trim((string) ($_POST['username'] ?? ''));
+    $code_value = trim((string) ($_POST['code'] ?? ''));
 
-      if (!$expires || strtotime($expires) < time()) {
-        $error = 'Verification code expired. Please request a new one.';
-      } elseif (!password_verify($code_value, $otp_hash)) {
+    if ($username_value === '' || $code_value === '') {
+      $error = 'Please enter your username and verification code.';
+    } else {
+      $pending = find_pending_user_by_username(load_pending_users(), $username_value);
+      if (!$pending) {
         $error = 'Invalid verification details.';
       } else {
-        $removed = remove_pending_user_by_username($username_value);
-        if (!$removed) {
-          $error = 'We could not verify your account. Please try again.';
+        $expires = $pending['otp_expires'] ?? null;
+        $otp_hash = $pending['otp_hash'] ?? '';
+
+        if (!$expires || strtotime($expires) < time()) {
+          $error = 'Verification code expired. Please request a new one.';
+        } elseif (!password_verify($code_value, $otp_hash)) {
+          $error = 'Invalid verification details.';
         } else {
-          $final_error = '';
-          if (finalize_pending_user($removed, $final_error)) {
-            $success = 'Email verified. You can now sign in.';
+          $removed = remove_pending_user_by_username($username_value);
+          if (!$removed) {
+            $error = 'We could not verify your account. Please try again.';
           } else {
-            $error = $final_error !== '' ? $final_error : 'We could not verify your account. Please try again.';
+            $final_error = '';
+            if (finalize_pending_user($removed, $final_error)) {
+              $success = 'Email verified. You can now sign in.';
+            } else {
+              $error = $final_error !== '' ? $final_error : 'We could not verify your account. Please try again.';
+            }
           }
         }
       }
@@ -250,6 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <h3>Enter the code sent to your email</h3>
       <p class="otp-hint">The code expires in 10 minutes.</p>
       <form action="verify.php" method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>" />
         <input type="hidden" name="username" value="<?php echo htmlspecialchars($username_value, ENT_QUOTES, 'UTF-8'); ?>" />
         <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
           <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>

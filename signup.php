@@ -14,33 +14,39 @@ $values = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $values['first_name'] = trim((string) ($_POST['first_name'] ?? ''));
-  $values['middle_initial'] = trim((string) ($_POST['middle_initial'] ?? ''));
-  $values['last_name'] = trim((string) ($_POST['last_name'] ?? ''));
-  $values['username'] = trim((string) ($_POST['username'] ?? ''));
-  $values['email'] = trim((string) ($_POST['email'] ?? ''));
+  if (!validate_csrf_token((string) ($_POST['csrf_token'] ?? ''))) {
+    $error = 'Invalid form submission. Please try again.';
+  } else {
+    purge_expired_pending_users();
 
-  $pending_user = build_user_record($_POST, $error);
-  if ($pending_user) {
-    $otp_code = (string) random_int(100000, 999999);
-    $otp_expires = date('Y-m-d H:i:s', time() + 600);
-    $pending_user['otp_hash'] = password_hash($otp_code, PASSWORD_DEFAULT);
-    $pending_user['otp_expires'] = $otp_expires;
+    $values['first_name'] = trim((string) ($_POST['first_name'] ?? ''));
+    $values['middle_initial'] = trim((string) ($_POST['middle_initial'] ?? ''));
+    $values['last_name'] = trim((string) ($_POST['last_name'] ?? ''));
+    $values['username'] = trim((string) ($_POST['username'] ?? ''));
+    $values['email'] = trim((string) ($_POST['email'] ?? ''));
 
-    if (!add_pending_user($pending_user)) {
-      $error = 'Account could not be created. Please try again.';
-    } else {
-      $mail_error = '';
-      $recipient_name = trim($values['first_name'] . ' ' . $values['last_name']);
-      if ($recipient_name === '') {
-        $recipient_name = $values['username'];
-      }
+    $pending_user = build_user_record($_POST, $error);
+    if ($pending_user) {
+      $otp_code = (string) random_int(100000, 999999);
+      $otp_expires = date('Y-m-d H:i:s', time() + 600);
+      $pending_user['otp_hash'] = password_hash($otp_code, PASSWORD_DEFAULT);
+      $pending_user['otp_expires'] = $otp_expires;
 
-      if (send_verification_email($values['email'], $recipient_name, $otp_code, $mail_error)) {
-        header('Location: verify.php?username=' . rawurlencode($values['username']));
-        exit;
+      if (!add_pending_user($pending_user)) {
+        $error = 'Account could not be created. Please try again.';
       } else {
-        $error = 'Account created, but we could not send the verification email.';
+        $mail_error = '';
+        $recipient_name = trim($values['first_name'] . ' ' . $values['last_name']);
+        if ($recipient_name === '') {
+          $recipient_name = $values['username'];
+        }
+
+        if (send_verification_email($values['email'], $recipient_name, $otp_code, $mail_error)) {
+          header('Location: verify.php?username=' . rawurlencode($values['username']));
+          exit;
+        } else {
+          $error = 'Account created, but we could not send the verification email.';
+        }
       }
     }
   }
@@ -317,6 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <h3>Start your journey</h3>
       <h4>Register your account</h4>
       <form action="signup.php" method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>" />
         <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
           <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>

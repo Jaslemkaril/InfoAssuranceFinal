@@ -12,26 +12,30 @@ $error = '';
 $username_value = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $username_value = trim((string) ($_POST['username'] ?? ''));
-  $password = (string) ($_POST['password'] ?? '');
-
-  if ($username_value === '' || $password === '') {
-    $error = 'Please enter your username and password.';
+  if (!validate_csrf_token((string) ($_POST['csrf_token'] ?? ''))) {
+    $error = 'Invalid form submission. Please try again.';
   } else {
-    $auth_error = '';
-    $user = authenticate_user($username_value, $password, $auth_error);
-    if ($user) {
-      $_SESSION['user'] = [
-        'username' => $user['username'],
-        'full_name' => $user['full_name'] ?? $user['username'],
-        'email' => $user['email'] ?? ''
-      ];
+    $username_value = trim((string) ($_POST['username'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
 
-      header('Location: dashboard.php');
-      exit;
+    if ($username_value === '' || $password === '') {
+      $error = 'Please enter your username and password.';
+    } else {
+      $auth_error = '';
+      $user = authenticate_user($username_value, $password, $auth_error);
+      if ($user) {
+        $_SESSION['user'] = [
+          'username' => $user['username'],
+          'full_name' => $user['full_name'] ?? $user['username'],
+          'email' => $user['email'] ?? ''
+        ];
+
+        header('Location: dashboard.php');
+        exit;
+      }
+
+      $error = $auth_error !== '' ? $auth_error : 'Invalid username or password.';
     }
-
-    $error = $auth_error !== '' ? $auth_error : 'Invalid username or password.';
   }
 }
 ?>
@@ -330,6 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <h3>Good Morning</h3>
       <h4>Login your account</h4>
       <form action="index.php" method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>" />
         <div class="notice notice--error<?php echo $error === '' ? ' is-hidden' : ''; ?>" role="alert">
           <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>
