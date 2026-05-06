@@ -95,7 +95,7 @@ $display_name = $user['full_name'] ?? $user['username'] ?? 'Student';
       position: relative;
       padding: 3.2rem 3.2rem 3rem;
       color: #f2edff;
-      background: linear-gradient(155deg, rgba(124, 96, 230, 0.2), rgba(95, 67, 179, 0.25));
+      background: linear-gradient(155deg, #7c60e6, #5f43b3);
       display: flex;
       flex-direction: column;
       gap: 1.8rem;
@@ -149,7 +149,7 @@ $display_name = $user['full_name'] ?? $user['username'] ?? 'Student';
     }
 
     .stat {
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 16px;
       padding: 0.9rem 1rem;
       border: 1px solid rgba(255, 255, 255, 0.25);
@@ -161,7 +161,7 @@ $display_name = $user['full_name'] ?? $user['username'] ?? 'Student';
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.4px;
-      color: rgba(242, 237, 255, 0.7);
+      color: rgba(242, 237, 255, 0.75);
       margin-bottom: 0.35rem;
     }
 
