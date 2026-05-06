@@ -398,6 +398,7 @@ function send_verification_email(string $to_email, string $to_name, string $otp,
         $mail->SMTPAuth = true;
         $mail->Username = $config['smtp_user'];
         $mail->Password = $config['smtp_pass'];
+        $mail->Timeout = 10;
         $mail->Port = (int) $config['smtp_port'];
         $mail->SMTPSecure = $mail->Port === 465
             ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
@@ -459,6 +460,7 @@ function send_password_reset_email(string $to_email, string $to_name, string $re
         $mail->SMTPAuth = true;
         $mail->Username = $config['smtp_user'];
         $mail->Password = $config['smtp_pass'];
+        $mail->Timeout = 10;
         $mail->Port = (int) $config['smtp_port'];
         $mail->SMTPSecure = $mail->Port === 465
             ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
