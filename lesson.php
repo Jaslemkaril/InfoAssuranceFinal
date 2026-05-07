@@ -671,12 +671,14 @@ $completion_record = $completion_data[$username] ?? null;
         </div>
         <p style="font-size:0.88rem;color:#4a4060;margin:0 0 0.75rem;">WebGoat is a deliberately insecure Java application by OWASP used to practice web security. Follow these steps to run it locally:</p>
         <ol class="obj-list" style="padding-left:1.2rem;">
-          <li>Make sure <strong>Java 17+</strong> is installed. Verify with <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:1px 5px;border-radius:4px">java -version</code> in your terminal.</li>
-          <li>Go to the <strong>WebGoat GitHub Releases</strong> page (click <em>Open WebGoat</em> below) and download the latest <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:1px 5px;border-radius:4px">webgoat-*.jar</code> file.</li>
-          <li>Open a terminal in the folder where you saved the file and run:<br>
+          <li>Make sure <strong>Java 17+</strong> is installed on your machine.<br>
+            <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px">java -version</code>
+          </li>
+          <li>Click <strong>Open WebGoat</strong> below to go to the GitHub Releases page, then download the latest <strong>.jar</strong> file (e.g. <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px">webgoat-2023.8.jar</code>).</li>
+          <li>Open a terminal in the download folder and run:<br>
             <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px">java -jar webgoat-2023.8.jar</code>
           </li>
-          <li>Wait for the server to start, then open your browser and go to:<br>
+          <li>Once started, open your browser and visit:<br>
             <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px">http://localhost:8080/WebGoat</code>
           </li>
           <li>Register a new account on WebGoat and log in.</li>
