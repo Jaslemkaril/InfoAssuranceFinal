@@ -388,10 +388,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <label for="email">Email address</label>
           <input id="email" name="email" type="email" placeholder="name@example.com" autocomplete="email" required value="<?php echo htmlspecialchars($email_value, ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
-        <div class="field">
-          <label for="username">Username (optional)</label>
-          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" value="<?php echo htmlspecialchars($username_value, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
         <button class="btn" type="submit">Send Link</button>
       </form>
       <div class="switch">
