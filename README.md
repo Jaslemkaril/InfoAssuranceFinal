@@ -2,6 +2,12 @@
 
 A secure PHP web application with user authentication and WebGoat SQL Injection lesson integration.
 
+## Members
+- Jaslim T. Karil
+- Mark Christian E. Osumo
+- Collen Cuento
+- Kenneth Mira
+
 **Hosted link:** https://infoassurancefinal-production.up.railway.app
 
 ---
