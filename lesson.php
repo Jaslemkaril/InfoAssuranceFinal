@@ -660,27 +660,51 @@ $completion_record = $completion_data[$username] ?? null;
     <section class="panel">
       <div class="panel-header">
         <h2>SQL Injection</h2>
-        <p>Authentication bypass &mdash; complete all three steps below</p>
+        <p>Authentication bypass &mdash; complete all four steps below</p>
       </div>
 
-      <!-- Step 1: Objective -->
+      <!-- Step 1: Install WebGoat -->
       <div class="step-card step-objective">
         <div class="step-header">
           <span class="step-num">1</span>
-          <span class="step-title">Learning Objective</span>
+          <span class="step-title">Install &amp; Run WebGoat</span>
         </div>
-        <ul class="obj-list">
-          <li>Identify where user input is interpolated into the SQL query.</li>
-          <li>Craft a payload (e.g. <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:1px 5px;border-radius:4px">admin' OR '1'='1</code>) to bypass the check.</li>
-          <li>Observe that authentication is bypassed without a valid password.</li>
-          <li>Explain the remediation: parameterized queries / prepared statements.</li>
-        </ul>
+        <p style="font-size:0.88rem;color:#4a4060;margin:0 0 0.75rem;">WebGoat is a deliberately insecure Java application by OWASP used to practice web security. Follow these steps to run it locally:</p>
+        <ol class="obj-list" style="padding-left:1.2rem;">
+          <li>Make sure <strong>Java 17+</strong> is installed. Verify with <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:1px 5px;border-radius:4px">java -version</code> in your terminal.</li>
+          <li>Go to the <strong>WebGoat GitHub Releases</strong> page (click <em>Open WebGoat</em> below) and download the latest <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:1px 5px;border-radius:4px">webgoat-*.jar</code> file.</li>
+          <li>Open a terminal in the folder where you saved the file and run:<br>
+            <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px">java -jar webgoat-2023.8.jar</code>
+          </li>
+          <li>Wait for the server to start, then open your browser and go to:<br>
+            <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px">http://localhost:8080/WebGoat</code>
+          </li>
+          <li>Register a new account on WebGoat and log in.</li>
+        </ol>
       </div>
 
-      <!-- Step 2: Screenshot reminder -->
+      <!-- Step 2: Do the lesson -->
+      <div class="step-card" style="border-left:3px solid var(--step1);">
+        <div class="step-header">
+          <span class="step-num" style="background:var(--step1);">2</span>
+          <span class="step-title">Complete the SQL Injection Lesson</span>
+        </div>
+        <p style="font-size:0.88rem;color:#4a4060;margin:0 0 0.75rem;">Inside WebGoat, navigate to the specific lesson this project is based on:</p>
+        <ol class="obj-list" style="padding-left:1.2rem;">
+          <li>In the left sidebar, click <strong>SQL Injection (intro)</strong>.</li>
+          <li>Work through the lesson pages until you reach <strong>"Authentication Bypass"</strong>.</li>
+          <li>In the login form, enter the payload below into the username field and any text for the password:<br>
+            <code style="font-size:0.78rem;color:var(--accent);background:#ede8ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px">admin' OR '1'='1' --</code>
+          </li>
+          <li>Observe that the login succeeds without a valid password — this is the SQL Injection bypass.</li>
+          <li>Read the lesson explanation on why <strong>parameterized queries / prepared statements</strong> prevent this attack.</li>
+        </ol>
+      </div>
+
+      <!-- Step 3: Screenshot reminder -->
       <div class="step-card step-screenshot">
         <div class="step-header">
-          <span class="step-num">2</span>
+          <span class="step-num">3</span>
           <span class="step-title">Capture Your Proof</span>
         </div>
         <div class="screenshot-body">
@@ -690,16 +714,16 @@ $completion_record = $completion_data[$username] ?? null;
             </svg>
           </div>
           <div class="screenshot-text">
-            <strong>Take a screenshot before you submit</strong>
+            <strong>Take a screenshot of the completed lesson page</strong>
             Save it as <code style="font-size:0.78rem;color:#7a4b00;background:#fff3e0;padding:1px 5px;border-radius:4px">webgoat-sqli.png</code> and keep it ready for your report. Your completion note below should reference it.
           </div>
         </div>
       </div>
 
-      <!-- Step 3: Completion form -->
+      <!-- Step 4: Completion form -->
       <div class="step-card step-form">
         <div class="step-header">
-          <span class="step-num">3</span>
+          <span class="step-num">4</span>
           <span class="step-title">Submit Completion Evidence</span>
         </div>
 
